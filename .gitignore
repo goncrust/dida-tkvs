@@ -16,4 +16,6 @@ util/.classpath
 util/.project
 util/.settings/
 util/target/
-
+contract/.classpath
+contract/target/
+.DS_Store
