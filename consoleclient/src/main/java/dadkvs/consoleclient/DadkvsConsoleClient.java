@@ -123,10 +123,10 @@ public class DadkvsConsoleClient {
                             } else
                                 System.out.println("no reply received");
                         } catch (NumberFormatException e) {
-                            System.out.println("usage: leader on/off replica");
+                            System.out.println("usage: leader 1/0 replica (1=on, 0=off)");
                         }
                     } else {
-                        System.out.println("usage: leader on/off replica");
+                        System.out.println("usage: leader 1/0 replica (1=on, 0=off)");
                     }
                     break;
                 case "debug":
@@ -155,10 +155,10 @@ public class DadkvsConsoleClient {
                             } else
                                 System.out.println("no reply received");
                         } catch (NumberFormatException e) {
-                            System.out.println("usage: leader on/off replica");
+                            System.out.println("usage: debug mode replica");
                         }
                     } else {
-                        System.out.println("usage: leader on/off replica");
+                        System.out.println("usage: debug mode replica");
                     }
                     break;
                 case "reconfig":
@@ -242,7 +242,7 @@ public class DadkvsConsoleClient {
                             System.out.println("usage: reconfig configuration");
                         }
                     } else {
-                        System.out.println("usage: leader on/off replica");
+                        System.out.println("usage: reconfig configuration");
                     }
                     break;
                 case "exit":
