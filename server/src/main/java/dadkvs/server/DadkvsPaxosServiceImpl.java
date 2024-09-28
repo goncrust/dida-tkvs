@@ -42,7 +42,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
     }
 
     @Override
-    public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
+    public void learn(DadkvsPaxos.LearnRequest request,
+            StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
         // for debug purposes
         System.out.println("Receive learn request: " + request);
 

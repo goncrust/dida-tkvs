@@ -17,7 +17,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     }
 
     @Override
-    public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
+    public void read(DadkvsMain.ReadRequest request,
+            StreamObserver<DadkvsMain.ReadReply> responseObserver) {
         // for debug purposes
         System.out.println("Receiving read request:" + request);
 
@@ -33,7 +34,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     }
 
     @Override
-    public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
+    public void committx(DadkvsMain.CommitRequest request,
+            StreamObserver<DadkvsMain.CommitReply> responseObserver) {
         // for debug purposes
         System.out.println("Receiving commit request:" + request);
 
@@ -46,12 +48,13 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         int writeval = request.getWriteval();
 
         // for debug purposes
-        System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+        System.out.println("reqid " + reqid + " key1 " + key1 + " v1 "
+                + version1 + " k2 " + key2 + " v2 " + version2
                 + " wk " + writekey + " writeval " + writeval);
 
         this.timestamp++;
-        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
-                this.timestamp);
+        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2,
+                version2, writekey, writeval, this.timestamp);
         boolean result = this.server_state.store.commit(txrecord);
 
         // for debug purposes
