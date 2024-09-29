@@ -18,10 +18,12 @@ import io.grpc.stub.StreamObserver;
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 
     DadkvsServerState server_state;
+    int rnd = 0;
+    int vrnd = 0;
+    int vval = -1;
 
     public DadkvsPaxosServiceImpl(DadkvsServerState state) {
         this.server_state = state;
-
     }
 
     @Override
@@ -30,6 +32,30 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // for debug purposes
         System.out.println("Receive phase1 request: " + request);
 
+        int i = request.getPhase1Timestamp();
+        int config = request.getPhase1Config();
+        int index = request.getPhase1Index(); // TODO: Para que serve isto?
+
+        if (i > rnd) {
+            // Setting up the config to be used for this Paxos instance
+            VersionedValue old_config = server_state.store.read(0);
+            VersionedValue new_config = new VersionedValue(config, old_config.getVersion() + 1);
+            server_state.store.write(0, new_config);
+
+            rnd = i;
+            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+                    .setPhase1Config(config).setPhase1Index(index)
+                    .setPhase1Timestamp(vrnd).setPhase1Accepted(true)
+                    .setPhase1Value(vval).build();
+
+        } else {
+            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+                    .setPhase1Config(config).setPhase1Index(index)
+                    .setPhase1Timestamp(rnd).setPhase1Accepted(false).build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        }
     }
 
     @Override
