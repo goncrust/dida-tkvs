@@ -32,6 +32,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // for debug purposes
         System.out.println("Receive phase1 request: " + request);
 
+        DadkvsPaxos.PhaseOneReply response;
+
         int i = request.getPhase1Timestamp();
         int config = request.getPhase1Config();
         int index = request.getPhase1Index(); // TODO: Para que serve isto?
@@ -43,19 +45,18 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             server_state.store.write(0, new_config);
 
             rnd = i;
-            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+            response = DadkvsPaxos.PhaseOneReply.newBuilder()
                     .setPhase1Config(config).setPhase1Index(index)
                     .setPhase1Timestamp(vrnd).setPhase1Accepted(true)
                     .setPhase1Value(vval).build();
 
         } else {
-            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+            response = DadkvsPaxos.PhaseOneReply.newBuilder()
                     .setPhase1Config(config).setPhase1Index(index)
                     .setPhase1Timestamp(rnd).setPhase1Accepted(false).build();
-
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
         }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -64,6 +65,46 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         // for debug purposes
         System.out.println("Receive phase two request: " + request);
 
+        DadkvsPaxos.PhaseTwoReply response;
+
+        int i = request.getPhase2Timestamp();
+        int config = request.getPhase2Config();
+        int index = request.getPhase2Index(); // TODO: Para que serve isto?
+
+        if (i > rnd) {
+            rnd = i;
+            vrnd = i;
+            vval = request.getPhase2Value();
+            response = DadkvsPaxos.PhaseTwoReply.newBuilder()
+                    .setPhase2Config(config).setPhase2Index(index)
+                    .setPhase2Accepted(true).build();
+
+            DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
+            learn_request.setLearnconfig(config).setLearnindex(index)
+                    .setLearnvalue(vval).setLearntimestamp(vrnd);
+
+            ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
+
+            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
+                    learn_responses, this.server_state.n_servers);
+
+            for (int j = 0; j < this.server_state.n_servers; j++) {
+                if (j == this.server_state.my_id)
+                    continue;
+
+                CollectorStreamObserver<DadkvsPaxos.LearnReply> execute_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
+                        learn_collector);
+                this.server_state.async_stubs[j].learn(learn_request.build(), execute_observer);
+            }
+            learn_collector.waitForTarget(this.server_state.responses_needed);
+
+        } else {
+            response = DadkvsPaxos.PhaseTwoReply.newBuilder()
+                    .setPhase2Config(config).setPhase2Index(index)
+                    .setPhase2Accepted(false).build();
+        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -73,5 +114,4 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         System.out.println("Receive learn request: " + request);
 
     }
-
 }
