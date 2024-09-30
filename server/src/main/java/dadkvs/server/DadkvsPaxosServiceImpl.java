@@ -34,17 +34,18 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         DadkvsPaxos.PhaseOneReply response;
 
-        int i = request.getPhase1Timestamp();
+        int timestamp = request.getPhase1Timestamp();
         int config = request.getPhase1Config();
         int index = request.getPhase1Index(); // TODO: Para que serve isto?
 
-        if (i > rnd) {
+        if (timestamp > rnd) {
             // Setting up the config to be used for this Paxos instance
+            // TODO: is this needed? There is no reconfiguration on this step
             VersionedValue old_config = server_state.store.read(0);
             VersionedValue new_config = new VersionedValue(config, old_config.getVersion() + 1);
             server_state.store.write(0, new_config);
 
-            rnd = i;
+            rnd = timestamp;
             response = DadkvsPaxos.PhaseOneReply.newBuilder()
                     .setPhase1Config(config).setPhase1Index(index)
                     .setPhase1Timestamp(vrnd).setPhase1Accepted(true)
@@ -67,13 +68,13 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         DadkvsPaxos.PhaseTwoReply response;
 
-        int i = request.getPhase2Timestamp();
+        int timestamp = request.getPhase2Timestamp();
         int config = request.getPhase2Config();
         int index = request.getPhase2Index(); // TODO: Para que serve isto?
 
-        if (i > rnd) {
-            rnd = i;
-            vrnd = i;
+        if (timestamp > rnd) {
+            rnd = timestamp;
+            vrnd = timestamp;
             vval = request.getPhase2Value();
             response = DadkvsPaxos.PhaseTwoReply.newBuilder()
                     .setPhase2Config(config).setPhase2Index(index)
@@ -111,7 +112,31 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
     public void learn(DadkvsPaxos.LearnRequest request,
             StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
         // for debug purposes
-        System.out.println("Receive learn request: " + request);
+        System.out.println("Received learn request: " + request);
+    
+        int learnTimestamp = request.getLearntimestamp();
+        int learnValue = request.getLearnvalue();
+        int learnConfig = request.getLearnconfig();
+        int learnIndex = request.getLearnindex();
+    
+        VersionedValue storedValue = server_state.store.read(learnIndex);
+    
+        if (learnTimestamp > storedValue.getVersion()) {
+            VersionedValue newValue = new VersionedValue(learnValue, learnTimestamp);
+            System.out.println("Writing value to index " + learnIndex);
+            server_state.store.write(learnIndex, newValue);
+        } else {
+            System.out.println("Value outdated. current version: " + storedValue.getVersion());
+            // should be error?
+        }
 
+        DadkvsPaxos.LearnReply response = DadkvsPaxos.LearnReply.newBuilder()
+                .setLearnaccepted(true)
+                .setLearnindex(learnIndex)
+                .setLearnconfig(learnConfig)
+                .build();
+    
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 }

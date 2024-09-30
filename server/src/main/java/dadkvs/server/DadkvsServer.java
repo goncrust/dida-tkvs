@@ -36,7 +36,7 @@ public class DadkvsServer {
         int my_id = Integer.valueOf(args[1]);
 
         server_state = new DadkvsServerState(kvsize, base_port, my_id);
-
+        server_state.initComms();
         port = base_port + my_id;
 
         final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
@@ -53,5 +53,7 @@ public class DadkvsServer {
 
         // Do not exit the main thread. Wait until server is terminated.
         server.awaitTermination();
+
+        server_state.terminateComms();
     }
 }

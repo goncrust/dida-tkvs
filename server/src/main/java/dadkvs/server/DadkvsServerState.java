@@ -27,7 +27,7 @@ public class DadkvsServerState {
         debug_mode = 0;
         store_size = kv_size;
         n_servers = 5;
-        responses_needed = 0;
+        responses_needed = 3;
         store = new KeyValueStore(kv_size);
         main_loop = new MainLoop(this);
         main_loop_worker = new Thread(main_loop);
