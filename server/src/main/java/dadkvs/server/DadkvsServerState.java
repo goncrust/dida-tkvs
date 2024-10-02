@@ -4,6 +4,10 @@ import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class DadkvsServerState {
     boolean i_am_leader;
     int debug_mode;
@@ -16,6 +20,20 @@ public class DadkvsServerState {
     MainLoop main_loop;
     Thread main_loop_worker;
 
+    // TODO: Trocar estas data structures. Nao precisam de tolerar concorrencia
+    // porque tudo no main loop e synchornized
+    ConcurrentHashMap<Integer, PendingTransaction> pendingTransactions;
+    LinkedBlockingQueue<PendingRequest> pendingRequests;
+
+    // Paxos variables
+    AtomicInteger currentIndex;
+    AtomicInteger rnd;
+    AtomicInteger vrnd;
+    AtomicInteger vval;
+
+    // Possible server configurations
+    Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+
     String[] targets;
     ManagedChannel[] channels;
     DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
@@ -27,14 +45,20 @@ public class DadkvsServerState {
         debug_mode = 0;
         store_size = kv_size;
         n_servers = 5;
-        responses_needed = 3;
+        responses_needed = 2;
         store = new KeyValueStore(kv_size);
         main_loop = new MainLoop(this);
         main_loop_worker = new Thread(main_loop);
         main_loop_worker.start();
+        pendingTransactions = new ConcurrentHashMap<>();
+        pendingRequests = new LinkedBlockingQueue<>();
+
+        currentIndex = new AtomicInteger(0);
+        rnd = new AtomicInteger(my_id);
+        vrnd = new AtomicInteger(0);
+        vval = new AtomicInteger(-1);
 
         targets = new String[n_servers];
-
         for (int i = 0; i < n_servers; i++) {
             targets[i] = new String();
             targets[i] = "localhost:" + (base_port + i);
@@ -63,5 +87,12 @@ public class DadkvsServerState {
             if (i != my_id)
                 channels[i].shutdownNow();
         }
+    }
+
+    public void finishPaxos() {
+        currentIndex.incrementAndGet();
+        rnd.set(my_id);
+        vrnd.set(0);
+        vval.set(-1);
     }
 }

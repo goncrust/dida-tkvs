@@ -13,6 +13,7 @@ import dadkvs.util.CollectorStreamObserver;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 
 public class MainLoop implements Runnable {
     DadkvsServerState server_state;
@@ -38,6 +39,34 @@ public class MainLoop implements Runnable {
                 wait();
             } catch (InterruptedException e) {
             }
+        }
+
+        PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
+
+        if (this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid())) {
+
+            PendingTransaction pendingTransaction =
+                    this.server_state.pendingTransactions.get(pendingRequest.getReqid());
+
+            boolean result = this.server_state.store.commit(pendingTransaction.getTransaction());
+
+            // for debug purposes
+            System.out
+                    .println("Result is ready for request with reqid " + pendingRequest.getReqid());
+
+            DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
+                    .setReqid(pendingRequest.getReqid()).setAck(result).build();
+
+            StreamObserver<DadkvsMain.CommitReply> responseObserver =
+                    pendingTransaction.getResponseObserver();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
+            // Removing the already processed reqid from the queue.
+            this.server_state.pendingRequests.poll();
+            // Removing the already processed transaction from the queue.
+            this.server_state.pendingTransactions.remove(pendingRequest.getReqid());
         }
         System.out.println("Main loop do work finish");
     }

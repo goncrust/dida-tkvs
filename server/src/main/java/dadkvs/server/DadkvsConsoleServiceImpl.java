@@ -6,7 +6,8 @@ import dadkvs.DadkvsConsoleServiceGrpc;
 
 import io.grpc.stub.StreamObserver;
 
-public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
+public class DadkvsConsoleServiceImpl
+        extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
 
     DadkvsServerState server_state;
 
@@ -28,8 +29,8 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 
         this.server_state.main_loop.wakeup();
 
-        DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
-                .setIsleaderack(response_value).build();
+        DadkvsConsole.SetLeaderReply response =
+                DadkvsConsole.SetLeaderReply.newBuilder().setIsleaderack(response_value).build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -49,8 +50,8 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
         // for debug purposes
         System.out.println("Setting debug mode to = " + this.server_state.debug_mode);
 
-        DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
-                .setAck(response_value).build();
+        DadkvsConsole.SetDebugReply response =
+                DadkvsConsole.SetDebugReply.newBuilder().setAck(response_value).build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
