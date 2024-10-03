@@ -4,6 +4,7 @@ import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,9 +28,9 @@ public class DadkvsServerState {
 
     // Paxos variables
     AtomicInteger currentIndex;
-    AtomicInteger rnd;
-    AtomicInteger vrnd;
-    AtomicInteger vval;
+    ArrayList<AtomicInteger> rnd;
+    ArrayList<AtomicInteger> vrnd;
+    ArrayList<AtomicInteger> vval;
 
     // Possible server configurations
     Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
@@ -53,10 +54,10 @@ public class DadkvsServerState {
         pendingTransactions = new ConcurrentHashMap<>();
         pendingRequests = new LinkedBlockingQueue<>();
 
-        currentIndex = new AtomicInteger(0);
-        rnd = new AtomicInteger(my_id);
-        vrnd = new AtomicInteger(0);
-        vval = new AtomicInteger(-1);
+        currentIndex.set(0);
+        rnd = new ArrayList<AtomicInteger>();
+        vrnd = new ArrayList<AtomicInteger>();
+        vval = new ArrayList<AtomicInteger>();
 
         targets = new String[n_servers];
         for (int i = 0; i < n_servers; i++) {
@@ -89,10 +90,11 @@ public class DadkvsServerState {
         }
     }
 
-    public void finishPaxos() {
-        currentIndex.incrementAndGet();
-        rnd.set(my_id);
-        vrnd.set(0);
-        vval.set(-1);
+    public void newPaxos() {
+        rnd.add(new AtomicInteger(my_id));
+        vrnd.add(new AtomicInteger(0));
+        vval.add(new AtomicInteger(-1));
+        currentIndex.getAndAdd(1);
     }
+
 }
