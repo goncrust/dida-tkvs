@@ -1,13 +1,14 @@
 package dadkvs.server;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DadkvsServerState {
     boolean i_am_leader;
@@ -21,10 +22,8 @@ public class DadkvsServerState {
     MainLoop main_loop;
     Thread main_loop_worker;
 
-    // TODO: Trocar estas data structures. Nao precisam de tolerar concorrencia
-    // porque tudo no main loop e synchornized
-    ConcurrentHashMap<Integer, PendingTransaction> pendingTransactions;
-    LinkedBlockingQueue<PendingRequest> pendingRequests;
+    LinkedHashMap<Integer, PendingTransaction> pendingTransactions; // linked to prioritize insertion order
+    Queue<PendingRequest> pendingRequests;
 
     // Paxos variables
     AtomicInteger currentIndex;
@@ -51,13 +50,14 @@ public class DadkvsServerState {
         main_loop = new MainLoop(this);
         main_loop_worker = new Thread(main_loop);
         main_loop_worker.start();
-        pendingTransactions = new ConcurrentHashMap<>();
-        pendingRequests = new LinkedBlockingQueue<>();
+        pendingTransactions = new LinkedHashMap<>();
+        pendingRequests = new LinkedList<>();
 
-        currentIndex.set(0);
+        currentIndex.set(-1);
         rnd = new ArrayList<AtomicInteger>();
         vrnd = new ArrayList<AtomicInteger>();
         vval = new ArrayList<AtomicInteger>();
+        newPaxos();
 
         targets = new String[n_servers];
         for (int i = 0; i < n_servers; i++) {
@@ -94,7 +94,7 @@ public class DadkvsServerState {
         rnd.add(new AtomicInteger(my_id));
         vrnd.add(new AtomicInteger(0));
         vval.add(new AtomicInteger(-1));
-        currentIndex.getAndAdd(1);
+        currentIndex.getAndIncrement();
     }
 
 }

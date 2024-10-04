@@ -4,9 +4,6 @@ import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
-import dadkvs.DadkvsMain;
-import dadkvs.DadkvsMainServiceGrpc;
-
 public class DadkvsServer {
 
     static DadkvsServerState server_state;
