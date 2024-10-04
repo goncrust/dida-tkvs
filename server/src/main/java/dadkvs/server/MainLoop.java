@@ -13,12 +13,10 @@ public class MainLoop implements Runnable {
     DadkvsServerState server_state;
 
     int backoff;
-    boolean transactionNotAvailable;
 
     public MainLoop(DadkvsServerState state) {
         this.server_state = state;
         this.backoff = 100;
-        transactionNotAvailable = false;
     }
 
     public void run() {
@@ -28,12 +26,18 @@ public class MainLoop implements Runnable {
 
     synchronized public void doWork() {
         System.out.println("Main loop do work start");
-        while ((transactionNotAvailable || this.server_state.pendingRequests.isEmpty())
-                && (!this.server_state.i_am_leader
-                        || this.server_state.pendingTransactions.isEmpty())) {
+
+        boolean nextRequestReady = false;
+        while (!nextRequestReady && (!this.server_state.i_am_leader
+                || this.server_state.pendingTransactions.isEmpty())) {
             System.out.println("Main loop do work: waiting");
             try {
                 wait();
+                if (!this.server_state.pendingRequests.isEmpty()) {
+                    PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
+                    nextRequestReady = !this.server_state.pendingTransactions
+                            .containsKey(pendingRequest.getReqid());
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 System.exit(1);
@@ -62,10 +66,8 @@ public class MainLoop implements Runnable {
         PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
 
         if (!this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid())) {
-            transactionNotAvailable = true;
             return;
         }
-        transactionNotAvailable = false;
 
         PendingTransaction pendingTransaction =
                 this.server_state.pendingTransactions.get(pendingRequest.getReqid());
