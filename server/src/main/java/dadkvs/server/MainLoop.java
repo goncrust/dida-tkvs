@@ -118,6 +118,10 @@ public class MainLoop implements Runnable {
         int config = this.server_state.store.read(0).getValue();
         int index = this.server_state.currentIndex.get();
 
+        if (this.server_state.rnd.get(index).get() == -1) {
+            this.server_state.rnd.get(index).set(this.server_state.my_id);
+        }
+
         // for debug purposes
         System.out.println("Starting Paxos Phase 1");
         DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();

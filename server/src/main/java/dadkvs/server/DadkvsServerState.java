@@ -92,7 +92,7 @@ public class DadkvsServerState {
     }
 
     public void newPaxos() {
-        rnd.add(new AtomicInteger(my_id));
+        rnd.add(new AtomicInteger(-1));
         vrnd.add(new AtomicInteger(0));
         vval.add(new AtomicInteger(-1));
         currentIndex.getAndIncrement();

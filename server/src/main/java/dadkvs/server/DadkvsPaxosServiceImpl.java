@@ -109,11 +109,11 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
                         learn_collector);
                 this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
+                System.out.println("Learn request sent to server " + j + " with: config " + config + " index " + index
+                        + "learnvalue " + this.server_state.vval.get(index).get() + " learntimestamp "
+                        + this.server_state.vrnd.get(index).get());
             }
             learn_collector.waitForTarget(this.server_state.responses_needed);
-            System.out.println("Learn request sent with: config " + config + " index " + index
-                    + "learnvalue " + this.server_state.vval.get(index).get() + " learntimestamp "
-                    + this.server_state.vrnd.get(index).get());
         } else {
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(false).build();
