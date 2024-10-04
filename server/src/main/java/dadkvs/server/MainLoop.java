@@ -34,11 +34,15 @@ public class MainLoop implements Runnable {
             }
         }
 
-        if (!this.server_state.pendingRequests.isEmpty())
+        if (!this.server_state.pendingRequests.isEmpty()) {
+            System.out.println("doWork: going to processPendingRequests");
             processPendingRequest();
+        }
 
-        if (this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty())
+        if (this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty()) {
+            System.out.println("doWork: going to proposePendingTransaction");
             proposePendingTransaction();
+        }
 
         System.out.println("Main loop do work finish");
     }
@@ -48,6 +52,7 @@ public class MainLoop implements Runnable {
     }
 
     synchronized private void processPendingRequest() {
+        System.out.println("------------- processPendingRequest -----------------");
         PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
 
         if (!this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid()))
@@ -55,12 +60,13 @@ public class MainLoop implements Runnable {
 
         PendingTransaction pendingTransaction = this.server_state.pendingTransactions
                 .get(pendingRequest.getReqid());
+        pendingTransaction.getTransaction().setTimestamp(pendingRequest.getIndex());
 
         boolean result = this.server_state.store.commit(pendingTransaction.getTransaction());
 
         // for debug purposes
         System.out
-                .println("Result is ready for request with reqid " + pendingRequest.getReqid());
+                .println("Result ( " + result + " ) is ready for request with reqid " + pendingRequest.getReqid());
 
         DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
                 .setReqid(pendingRequest.getReqid()).setAck(result).build();
@@ -74,22 +80,26 @@ public class MainLoop implements Runnable {
         this.server_state.pendingRequests.poll();
         // Removing the already processed transaction from the queue.
         this.server_state.pendingTransactions.remove(pendingRequest.getReqid());
+        System.out.println("------------- processPendingRequest end -----------------");
     }
 
     synchronized private void proposePendingTransaction() {
+        System.out.println("------------- proposePendingTransaction -----------------");
         int proposingReqID = (Integer) this.server_state.pendingTransactions.keySet().toArray()[0];
         int proposedReqID = paxos(proposingReqID);
         if (proposedReqID == -1) {
-            this.server_state.rnd.get(this.server_state.currentIndex.get()).getAndIncrement();
+            this.server_state.rnd.get(this.server_state.currentIndex.get()).getAndAdd(this.server_state.n_servers);
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
             this.server_state.newPaxos();
         }
+        System.out.println("------------- proposePendingTransaction end -----------------");
     }
 
     private int paxos(int reqid) {
         // for debug purposes
+        System.out.println("------------- paxos -----------------");
         System.out.println("Starting Paxos for reqid " + reqid);
 
         int config = this.server_state.store.read(0).getValue();
@@ -118,6 +128,10 @@ public class MainLoop implements Runnable {
 
             this.server_state.async_stubs[i].phaseone(phase1_request.build(), phase1_observer);
         }
+        System.out.println(
+                "Sent phase1 request: config: " + config + "index" + index + "timestamp"
+                        + this.server_state.rnd.get(index).get() + ". Waiting for "
+                        + this.server_state.responses_needed);
         phase1_collector.waitForTarget(this.server_state.responses_needed);
 
         int agreedReqID = reqid;
@@ -137,6 +151,7 @@ public class MainLoop implements Runnable {
         }
         if (acceptedRequests < this.server_state.responses_needed) {
             // Phase 1 failed, we couldn't get a majority
+            System.out.println("Phase1 failed to get majority");
             return -1;
         }
 
@@ -168,8 +183,10 @@ public class MainLoop implements Runnable {
 
             this.server_state.async_stubs[i].phasetwo(phase2_request.build(), phase2_observer);
         }
+        System.out.println("Sent phase2 request: " + phase2_request + ". agreedReqID: " + agreedReqID);
 
         // Paxos was successful. The next ReqId to be processed has been decided.
+        System.out.println("------------- paxos end -----------------");
         return agreedReqID;
     }
 }

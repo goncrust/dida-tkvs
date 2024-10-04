@@ -16,6 +16,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     public void read(DadkvsMain.ReadRequest request,
             StreamObserver<DadkvsMain.ReadReply> responseObserver) {
         // for debug purposes
+        System.out.println("------------- read -----------------");
         System.out.println("Receiving read request:" + request);
 
         int reqid = request.getReqid();
@@ -27,12 +28,14 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+        System.out.println("------------- read end -----------------");
     }
 
     @Override
     public void committx(DadkvsMain.CommitRequest request,
             StreamObserver<DadkvsMain.CommitReply> responseObserver) {
         // for debug purposes
+        System.out.println("------------- committx -----------------");
         System.out.println("Receiving commit request:" + request);
 
         int reqid = request.getReqid();
@@ -56,5 +59,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // we decided to process next through consensus or, if the server is the leader,
         // propose it next.
         this.server_state.main_loop.wakeup();
+        System.out.println("------------- committx end -----------------");
     }
 }
