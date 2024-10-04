@@ -116,8 +116,10 @@ public class DadkvsClient {
             async_stubs[i].read(read_request.build(), read_observer);
         }
         read_collector.waitForTarget(responses_needed);
-        if (read_responses.size() >= responses_needed) {
-            Iterator<DadkvsMain.ReadReply> read_iterator = read_responses.iterator();
+        ArrayList<DadkvsMain.ReadReply> read_responses_copy = new ArrayList<>(read_responses);
+
+        if (read_responses_copy.size() >= responses_needed) {
+            Iterator<DadkvsMain.ReadReply> read_iterator = read_responses_copy.iterator();
             DadkvsMain.ReadReply read_reply = read_iterator.next();
             System.out.println("Reqid = " + reqid + " id in reply = " + read_reply.getReqid());
             System.out.println("read key " + read_request.getKey() + " = <" + read_reply.getValue() + ","
