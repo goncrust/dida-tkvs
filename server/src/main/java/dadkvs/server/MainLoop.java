@@ -31,7 +31,7 @@ public class MainLoop implements Runnable {
         if (!this.server_state.pendingRequests.isEmpty()) {
             PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
             nextRequestReady =
-                    !this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid());
+                    this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid());
         }
 
         while (!nextRequestReady && (!this.server_state.i_am_leader
@@ -41,7 +41,7 @@ public class MainLoop implements Runnable {
                 wait();
                 if (!this.server_state.pendingRequests.isEmpty()) {
                     PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
-                    nextRequestReady = !this.server_state.pendingTransactions
+                    nextRequestReady = this.server_state.pendingTransactions
                             .containsKey(pendingRequest.getReqid());
                 }
             } catch (InterruptedException e) {
@@ -50,7 +50,7 @@ public class MainLoop implements Runnable {
             }
         }
 
-        if (!this.server_state.pendingRequests.isEmpty()) {
+        if (nextRequestReady) {
             System.out.println("doWork: going to processPendingRequests");
             processPendingRequest();
         }
