@@ -1,7 +1,6 @@
 package dadkvs.server;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
@@ -97,19 +96,18 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                     .setLearnvalue(this.server_state.vval.get(index).get())
                     .setLearntimestamp(this.server_state.vrnd.get(index).get());
 
-            ArrayList<DadkvsPaxos.LearnReply> learn_responses =
-                    new ArrayList<DadkvsPaxos.LearnReply>();
+            ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
 
-            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector =
-                    new GenericResponseCollector<DadkvsPaxos.LearnReply>(learn_responses,
-                            this.server_state.n_servers);
+            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
+                    learn_responses,
+                    this.server_state.n_servers);
 
             for (int j = 0; j < this.server_state.n_servers; j++) {
                 if (j == this.server_state.my_id)
                     continue;
 
-                CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer =
-                        new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
+                CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
+                        learn_collector);
                 this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
             }
             learn_collector.waitForTarget(this.server_state.responses_needed);
@@ -157,9 +155,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             System.out.println("Responded to learn request with: accepted: true index: " + index
                     + " config: " + config);
         } else {
-            // TODO: Index missmatch. This learn message is not related to our most recent
+            // Index missmatch. This learn message is not related to our most recent
             // paxos instance.
-            // Just answer with accepted = False?
             response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(false)
                     .setLearnindex(index).setLearnconfig(config).build();
             System.out.println("Responded to learn request with: accepted: false index: " + index
