@@ -53,7 +53,7 @@ public class DadkvsServerState {
         pendingTransactions = new LinkedHashMap<>();
         pendingRequests = new LinkedList<>();
 
-        currentIndex.set(-1);
+        currentIndex = new AtomicInteger(-1);
         rnd = new ArrayList<AtomicInteger>();
         vrnd = new ArrayList<AtomicInteger>();
         vval = new ArrayList<AtomicInteger>();
