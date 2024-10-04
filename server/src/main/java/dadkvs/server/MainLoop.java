@@ -28,6 +28,12 @@ public class MainLoop implements Runnable {
         System.out.println("Main loop do work start");
 
         boolean nextRequestReady = false;
+        if (!this.server_state.pendingRequests.isEmpty()) {
+            PendingRequest pendingRequest = this.server_state.pendingRequests.peek();
+            nextRequestReady =
+                    !this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid());
+        }
+
         while (!nextRequestReady && (!this.server_state.i_am_leader
                 || this.server_state.pendingTransactions.isEmpty())) {
             System.out.println("Main loop do work: waiting");
