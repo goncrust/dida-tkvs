@@ -30,10 +30,11 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         int config = request.getPhase1Config();
         int index = request.getPhase1Index();
 
-        System.out.println("index received: " + index + " currentIndex: " + this.server_state.currentIndex.get()
-                + " timestamp received: " + timestamp + " current timestamp (rnd): "
-                + this.server_state.rnd.get(index).get());
-        if (index <= this.server_state.currentIndex.get() && timestamp >= this.server_state.rnd.get(index).get()) {
+        System.out.println("index received: " + index + " currentIndex: "
+                + this.server_state.currentIndex.get() + " timestamp received: " + timestamp
+                + " current timestamp (rnd): " + this.server_state.rnd.get(index).get());
+        if (index <= this.server_state.currentIndex.get()
+                && timestamp >= this.server_state.rnd.get(index).get()) {
             // Setting up the config to be used for this Paxos instance
             VersionedValue old_config = server_state.store.read(0);
             VersionedValue new_config = new VersionedValue(config, old_config.getVersion() + 1);
@@ -41,18 +42,21 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
             this.server_state.rnd.set(index, new AtomicInteger(timestamp));
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
-                    .setPhase1Index(index).setPhase1Timestamp(this.server_state.vrnd.get(index).get())
-                    .setPhase1Accepted(true).setPhase1Value(this.server_state.vval.get(index).get()).build();
+                    .setPhase1Index(index)
+                    .setPhase1Timestamp(this.server_state.vrnd.get(index).get())
+                    .setPhase1Accepted(true).setPhase1Value(this.server_state.vval.get(index).get())
+                    .build();
 
-            System.out.println("Responded to phase one request with: index: " + index + " timestamp: "
-                    + this.server_state.vrnd.get(index).get() + "accepted: True value:"
-                    + this.server_state.vval.get(index).get());
+            System.out.println("Responded to phase one request with: index: " + index
+                    + " timestamp: " + this.server_state.vrnd.get(index).get()
+                    + "accepted: True value:" + this.server_state.vval.get(index).get());
         } else {
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
-                    .setPhase1Index(index).setPhase1Timestamp(this.server_state.rnd.get(index).get())
+                    .setPhase1Index(index)
+                    .setPhase1Timestamp(this.server_state.rnd.get(index).get())
                     .setPhase1Accepted(false).build();
-            System.out.println("Responded to phase one request with: index: " + index + " timestamp: "
-                    + this.server_state.rnd.get(index).get() + "accepted: False");
+            System.out.println("Responded to phase one request with: index: " + index
+                    + " timestamp: " + this.server_state.rnd.get(index).get() + "accepted: False");
         }
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -73,46 +77,48 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         int index = request.getPhase2Index();
         int value = request.getPhase2Value();
 
-        System.out.println("index received: " + index + " currentIndex: " + this.server_state.currentIndex.get()
-                + " timestamp received: " + timestamp + " current timestamp (rnd): "
-                + this.server_state.rnd.get(index).get());
-        if (index <= this.server_state.currentIndex.get() && timestamp >= this.server_state.rnd.get(index).get()) {
+        System.out.println("index received: " + index + " currentIndex: "
+                + this.server_state.currentIndex.get() + " timestamp received: " + timestamp
+                + " current timestamp (rnd): " + this.server_state.rnd.get(index).get());
+        if (index <= this.server_state.currentIndex.get()
+                && timestamp >= this.server_state.rnd.get(index).get()) {
             this.server_state.rnd.set(index, new AtomicInteger(timestamp));
             this.server_state.vrnd.set(index, new AtomicInteger(timestamp));
             this.server_state.vval.set(index, new AtomicInteger(value));
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(true).build();
-            System.out.println("Responded to phase two request with: config: " + config + " index: " + index
-                    + "accepted: " + true);
+            System.out.println("Responded to phase two request with: config: " + config + " index: "
+                    + index + "accepted: " + true);
 
             DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
             learn_request.setLearnconfig(config).setLearnindex(index)
                     .setLearnvalue(this.server_state.vval.get(index).get())
                     .setLearntimestamp(this.server_state.vrnd.get(index).get());
 
-            ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
+            ArrayList<DadkvsPaxos.LearnReply> learn_responses =
+                    new ArrayList<DadkvsPaxos.LearnReply>();
 
-            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
-                    learn_responses,
-                    this.server_state.n_servers);
+            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector =
+                    new GenericResponseCollector<DadkvsPaxos.LearnReply>(learn_responses,
+                            this.server_state.n_servers);
 
             for (int j = 0; j < this.server_state.n_servers; j++) {
                 if (j == this.server_state.my_id)
                     continue;
 
-                CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
-                        learn_collector);
+                CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer =
+                        new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
                 this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
             }
             learn_collector.waitForTarget(this.server_state.responses_needed);
-            System.out.println("Learn request sent with: config " + config + " index " + index + "learnvalue "
-                    + this.server_state.vval.get(index).get() + " learntimestamp "
+            System.out.println("Learn request sent with: config " + config + " index " + index
+                    + "learnvalue " + this.server_state.vval.get(index).get() + " learntimestamp "
                     + this.server_state.vrnd.get(index).get());
         } else {
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(false).build();
-            System.out.println("Responded to phase two request with: config: " + config + " index: " + index
-                    + "accepted: " + false);
+            System.out.println("Responded to phase two request with: config: " + config + " index: "
+                    + index + "accepted: " + false);
         }
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -134,7 +140,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         PendingRequest newRequest = new PendingRequest(value, index);
 
-        System.out.println("currentindex " + this.server_state.currentIndex.get() + " received index " + index);
+        System.out.println("currentindex " + this.server_state.currentIndex.get()
+                + " received index " + index);
         if (this.server_state.currentIndex.get() == index) {
             this.server_state.pendingRequests.add(newRequest);
 
@@ -145,16 +152,16 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
             response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(true)
                     .setLearnindex(index).setLearnconfig(config).build();
-            System.out
-                    .println("Responded to learn request with: accepted: true index: " + index + " config: " + config);
+            System.out.println("Responded to learn request with: accepted: true index: " + index
+                    + " config: " + config);
         } else {
             // TODO: Index missmatch. This learn message is not related to our most recent
             // paxos instance.
             // Just answer with accepted = False?
             response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(false)
                     .setLearnindex(index).setLearnconfig(config).build();
-            System.out
-                    .println("Responded to learn request with: accepted: false index: " + index + " config: " + config);
+            System.out.println("Responded to learn request with: accepted: false index: " + index
+                    + " config: " + config);
         }
         responseObserver.onNext(response);
         responseObserver.onCompleted();

@@ -50,7 +50,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2
                 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
 
-        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval);
+        TransactionRecord txrecord =
+                new TransactionRecord(key1, version1, key2, version2, writekey, writeval);
         PendingTransaction transaction = new PendingTransaction(txrecord, responseObserver);
 
         this.server_state.pendingTransactions.put(reqid, transaction);

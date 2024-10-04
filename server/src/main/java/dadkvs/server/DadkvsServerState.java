@@ -22,7 +22,8 @@ public class DadkvsServerState {
     MainLoop main_loop;
     Thread main_loop_worker;
 
-    LinkedHashMap<Integer, PendingTransaction> pendingTransactions; // linked to prioritize insertion order
+    // linked to prioritize insertion order
+    LinkedHashMap<Integer, PendingTransaction> pendingTransactions;
     Queue<PendingRequest> pendingRequests;
 
     // Paxos variables
@@ -32,7 +33,7 @@ public class DadkvsServerState {
     ArrayList<AtomicInteger> vval;
 
     // Possible server configurations
-    Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+    Integer[][] configs = {{0, 1, 2}, {1, 2, 3}, {2, 3, 4}};
 
     String[] targets;
     ManagedChannel[] channels;
