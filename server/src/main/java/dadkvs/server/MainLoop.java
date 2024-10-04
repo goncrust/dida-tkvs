@@ -28,8 +28,9 @@ public class MainLoop implements Runnable {
 
     synchronized public void doWork() {
         System.out.println("Main loop do work start");
-        while ((transactionNotAvailable || this.server_state.pendingRequests.isEmpty()) && (!this.server_state.i_am_leader
-                || this.server_state.pendingTransactions.isEmpty())) {
+        while ((transactionNotAvailable || this.server_state.pendingRequests.isEmpty())
+                && (!this.server_state.i_am_leader
+                        || this.server_state.pendingTransactions.isEmpty())) {
             System.out.println("Main loop do work: waiting");
             try {
                 wait();
