@@ -163,7 +163,7 @@ public class MainLoop implements Runnable {
         System.out.println("Startin Paxos Phase 2");
 
         // The leader is also an acceptor. Voting for the value we proposed
-        this.server_state.vval.set(index, new AtomicInteger(agreedReqID));
+        this.server_state.vval.get(index).set(agreedReqID);
 
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request =
                 DadkvsPaxos.PhaseTwoRequest.newBuilder();

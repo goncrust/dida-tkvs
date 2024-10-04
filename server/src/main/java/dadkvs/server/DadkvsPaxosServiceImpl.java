@@ -40,7 +40,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             VersionedValue new_config = new VersionedValue(config, old_config.getVersion() + 1);
             server_state.store.write(0, new_config);
 
-            this.server_state.rnd.set(index, new AtomicInteger(timestamp));
+            this.server_state.rnd.get(index).set(timestamp);
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
                     .setPhase1Index(index)
                     .setPhase1Timestamp(this.server_state.vrnd.get(index).get())
@@ -82,9 +82,11 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 + " current timestamp (rnd): " + this.server_state.rnd.get(index).get());
         if (index <= this.server_state.currentIndex.get()
                 && timestamp >= this.server_state.rnd.get(index).get()) {
-            this.server_state.rnd.set(index, new AtomicInteger(timestamp));
-            this.server_state.vrnd.set(index, new AtomicInteger(timestamp));
-            this.server_state.vval.set(index, new AtomicInteger(value));
+
+            this.server_state.rnd.get(index).set(timestamp);
+            this.server_state.vrnd.get(index).set(timestamp);
+            this.server_state.vval.get(index).set(value);
+
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(true).build();
             System.out.println("Responded to phase two request with: config: " + config + " index: "
