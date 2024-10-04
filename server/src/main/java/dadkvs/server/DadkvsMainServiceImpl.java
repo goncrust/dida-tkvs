@@ -26,8 +26,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder().setReqid(reqid)
                 .setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
-        System.out.println("Responded to read request with: reqid: " + reqid
-                + " value: " + vv.getValue() + " timestamp: " + vv.getVersion());
+        System.out.println("Responded to read request with: reqid: " + reqid + " value: "
+                + vv.getValue() + " timestamp: " + vv.getVersion());
         responseObserver.onNext(response);
         responseObserver.onCompleted();
         System.out.println("------------- read end -----------------");
