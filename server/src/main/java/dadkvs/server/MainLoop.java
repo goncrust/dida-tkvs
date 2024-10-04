@@ -1,6 +1,7 @@
 package dadkvs.server;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsPaxos;
@@ -117,9 +118,14 @@ public class MainLoop implements Runnable {
 
         int config = this.server_state.store.read(0).getValue();
         int index = this.server_state.currentIndex.get();
+        AtomicInteger rnd = this.server_state.rnd.get(index);
 
-        if (this.server_state.rnd.get(index).get() == -1) {
-            this.server_state.rnd.get(index).set(this.server_state.my_id);
+        if (rnd.get() == -1) {
+            rnd.set(this.server_state.my_id);
+        } else if (rnd.get() % this.server_state.n_servers != this.server_state.my_id) {
+            int offset = rnd.get() % this.server_state.n_servers;
+            int newRnd = rnd.get() + (offset - this.server_state.n_servers);
+            rnd.set(newRnd < 0 ? newRnd + this.server_state.n_servers : newRnd);
         }
 
         // for debug purposes
