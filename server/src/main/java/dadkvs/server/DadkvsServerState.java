@@ -1,7 +1,9 @@
 package dadkvs.server;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,11 +25,11 @@ public class DadkvsServerState {
 
     // linked to prioritize insertion order
     LinkedHashMap<Integer, PendingTransaction> pendingTransactions;
-    Queue<PendingRequest> pendingRequests;
+    PriorityQueue<PendingRequest> pendingRequests;
 
     // Paxos variables
     AtomicInteger currentIndex;
-    LinkedHashMap<Integer, PaxosInstance> instances;
+    private LinkedHashMap<Integer, PaxosInstance> instances;
 
     // Possible server configurations
     Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
@@ -49,7 +51,7 @@ public class DadkvsServerState {
         main_loop_worker = new Thread(main_loop);
         main_loop_worker.start();
         pendingTransactions = new LinkedHashMap<>();
-        pendingRequests = new LinkedList<>();
+        pendingRequests = new PriorityQueue<>(Comparator.comparingInt(req -> req.getIndex()));
 
         currentIndex = new AtomicInteger(-1);
         instances = new LinkedHashMap<>();

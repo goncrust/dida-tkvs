@@ -33,7 +33,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
         System.out.println("index received: " + index + " currentIndex: "
                 + this.server_state.currentIndex.get() + " timestamp received: " + timestamp
-                + " current timestamp (rnd): " + this.server_state.rnd.get(index).get());
+                + " current timestamp (rnd): " + inst.getRnd());
         if (timestamp >= inst.getRnd()) {
             // Setting up the config to be used for this Paxos instance
             VersionedValue old_config = server_state.store.read(0);
@@ -146,11 +146,14 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
         System.out.println("currentindex " + this.server_state.currentIndex.get()
                 + " received index " + index);
 
-        // TODO only execute the new pendingRequest if it is the current index
-        this.server_state.pendingRequests.add(newRequest);
+        if (index >= this.server_state.currentIndex.get()) {
+            this.server_state.pendingRequests.add(newRequest);
 
-        // Waking up the main loop since we may have a new request to work on.
-        this.server_state.main_loop.wakeup();
+            // Waking up the main loop since we may have a new request to work on.
+            this.server_state.main_loop.wakeup();
+
+            // TODO were should we increment the current round
+        }
 
         response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(true)
                 .setLearnindex(index).setLearnconfig(config).build();
