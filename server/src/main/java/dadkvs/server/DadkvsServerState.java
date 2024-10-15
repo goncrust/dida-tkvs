@@ -1,6 +1,5 @@
 package dadkvs.server;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -28,12 +27,10 @@ public class DadkvsServerState {
 
     // Paxos variables
     AtomicInteger currentIndex;
-    ArrayList<AtomicInteger> rnd;
-    ArrayList<AtomicInteger> vrnd;
-    ArrayList<AtomicInteger> vval;
+    LinkedHashMap<Integer, PaxosInstance> instances;
 
     // Possible server configurations
-    Integer[][] configs = {{0, 1, 2}, {1, 2, 3}, {2, 3, 4}};
+    Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
 
     String[] targets;
     ManagedChannel[] channels;
@@ -55,10 +52,7 @@ public class DadkvsServerState {
         pendingRequests = new LinkedList<>();
 
         currentIndex = new AtomicInteger(-1);
-        rnd = new ArrayList<AtomicInteger>();
-        vrnd = new ArrayList<AtomicInteger>();
-        vval = new ArrayList<AtomicInteger>();
-        newPaxos();
+        instances = new LinkedHashMap<>();
 
         targets = new String[n_servers];
         for (int i = 0; i < n_servers; i++) {
@@ -91,12 +85,10 @@ public class DadkvsServerState {
         }
     }
 
-    public void newPaxos() {
-        rnd.add(new AtomicInteger(-1));
-        vrnd.add(new AtomicInteger(0));
-        vval.add(new AtomicInteger(-1));
-        currentIndex.getAndIncrement();
-        System.out.println("newPaxos with currentIndex: " + currentIndex.get());
+    public PaxosInstance getPaxos(int index) {
+        if (this.instances.get(index) == null)
+            this.instances.put(index, new PaxosInstance());
+        return this.instances.get(index);
     }
 
 }
