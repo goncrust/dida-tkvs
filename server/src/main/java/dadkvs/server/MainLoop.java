@@ -96,6 +96,7 @@ public class MainLoop implements Runnable {
         boolean result = this.server_state.store.commit(pendingTransaction.getTransaction());
 
         // increment current index
+        // TODO i think we should increment the current index here
         this.server_state.currentIndex.getAndIncrement();
 
         // for debug purposes

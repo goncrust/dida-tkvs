@@ -116,7 +116,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                                 + index + "learnvalue " + inst.getVval()
                                 + " learntimestamp " + inst.getVrnd());
             }
-            learn_collector.waitForTarget(this.server_state.responses_needed);
+            learn_collector.waitForTarget(0);
         } else {
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(false).build();
@@ -151,8 +151,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
             // Waking up the main loop since we may have a new request to work on.
             this.server_state.main_loop.wakeup();
-
-            // TODO were should we increment the current round
         }
 
         response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(true)
