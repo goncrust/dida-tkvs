@@ -11,11 +11,8 @@ import io.grpc.stub.StreamObserver;
 public class MainLoop implements Runnable {
     DadkvsServerState server_state;
 
-    int backoff;
-
     public MainLoop(DadkvsServerState state) {
         this.server_state = state;
-        this.backoff = 100;
     }
 
     public void run() {
@@ -125,20 +122,9 @@ public class MainLoop implements Runnable {
         if (proposedReqID == -1) {
             PaxosInstance inst = this.server_state.getPaxos(this.server_state.currentIndex.get());
             inst.setRnd(inst.getRnd() + this.server_state.n_servers);
-
-            try {
-                // if there are 2 concurrent leaders, this exponential backoff prevents them
-                // from fighting indefinitely
-                Thread.sleep(this.backoff);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
-            this.backoff *= 2;
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
-            this.backoff = 100;
         }
         System.out.println("------------- proposePendingTransaction end -----------------");
     }
