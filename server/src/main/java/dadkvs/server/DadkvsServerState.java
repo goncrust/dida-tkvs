@@ -48,8 +48,7 @@ public class DadkvsServerState {
         responses_needed = 2;
         store = new KeyValueStore(kv_size);
         main_loop = new MainLoop(this);
-        main_loop_worker = new Thread(main_loop);
-        main_loop_worker.start();
+
         pendingTransactions = new LinkedHashMap<>();
         pendingRequests = new PriorityQueue<>(Comparator.comparingInt(req -> req.getIndex()));
 
@@ -61,6 +60,9 @@ public class DadkvsServerState {
             targets[i] = new String();
             targets[i] = "localhost:" + (base_port + i);
         }
+
+        main_loop_worker = new Thread(main_loop);
+        main_loop_worker.start();
     }
 
     public void initComms() {
