@@ -62,9 +62,7 @@ public class MainLoop implements Runnable {
         if (nextRequestReady) {
             System.out.println("doWork: going to processPendingRequests");
             processPendingRequest();
-        }
-
-        if (leaderPendingTransaction) {
+        } else if (leaderPendingTransaction) {
             System.out.println("doWork: going to proposePendingTransaction");
             proposePendingTransaction();
         }
@@ -121,7 +119,8 @@ public class MainLoop implements Runnable {
         int proposedReqID = paxos(proposingReqID);
         if (proposedReqID == -1) {
             PaxosInstance inst = this.server_state.getPaxos(this.server_state.currentIndex.get());
-            inst.setRnd(inst.getRnd() + this.server_state.n_servers);
+            inst.setRnd(inst.getRnd() + this.server_state.n_servers); // TODO maybe this increment is too soon, will
+                                                                      // cause other leader to not be accepted
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
@@ -171,7 +170,7 @@ public class MainLoop implements Runnable {
 
             this.server_state.async_stubs[i].phaseone(phase1_request.build(), phase1_observer);
         }
-        System.out.println("Sent phase1 request: config: " + config + "index" + index + "timestamp"
+        System.out.println("Sent phase1 request: config: " + config + " index: " + index + " timestamp: "
                 + inst.getRnd() + ". Waiting for "
                 + this.server_state.responses_needed);
         phase1_collector.waitForTarget(this.server_state.responses_needed);

@@ -52,7 +52,7 @@ public class DadkvsServerState {
         pendingTransactions = new LinkedHashMap<>();
         pendingRequests = new PriorityQueue<>(Comparator.comparingInt(req -> req.getIndex()));
 
-        currentIndex = new AtomicInteger(-1);
+        currentIndex = new AtomicInteger(0);
         instances = new LinkedHashMap<>();
 
         targets = new String[n_servers];
