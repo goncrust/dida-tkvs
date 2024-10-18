@@ -124,6 +124,8 @@ public class MainLoop implements Runnable {
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
+            // TODO if we dont increment here and the proposedReqID is not ours and we dont
+            // have the necessary information to process this reqid, will this cause spam?
         }
         System.out.println("------------- proposePendingTransaction end -----------------");
     }
@@ -225,6 +227,34 @@ public class MainLoop implements Runnable {
         }
         System.out.println(
                 "Sent phase2 request: " + phase2_request + ". agreedReqID: " + agreedReqID);
+
+        // TODO don't we need to check if phase2 was accepted?
+
+        // The leader is also an acceptor. Sending learns to learners
+        DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
+        learn_request.setLearnconfig(config).setLearnindex(index)
+                .setLearnvalue(inst.getVval())
+                .setLearntimestamp(inst.getRnd());
+
+        ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
+
+        GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
+                learn_responses,
+                this.server_state.n_servers);
+
+        for (int j = 0; j < this.server_state.n_servers; j++) {
+            if (j == this.server_state.my_id)
+                continue;
+
+            CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
+                    learn_collector);
+            this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
+            System.out.println(
+                    "Learn request sent to server " + j + " with: config " + config + " index "
+                            + index + "learnvalue " + inst.getVval()
+                            + " learntimestamp " + inst.getRnd());
+        }
+        learn_collector.waitForTarget(0);
 
         // Paxos was successful. The next ReqId to be processed has been decided.
         System.out.println("------------- paxos end -----------------");
