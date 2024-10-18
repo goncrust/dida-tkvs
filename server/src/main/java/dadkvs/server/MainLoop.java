@@ -10,9 +10,11 @@ import io.grpc.stub.StreamObserver;
 
 public class MainLoop implements Runnable {
     DadkvsServerState server_state;
+    int last_finished_index;
 
     public MainLoop(DadkvsServerState state) {
         this.server_state = state;
+        this.last_finished_index = -1;
     }
 
     public void run() {
@@ -38,7 +40,8 @@ public class MainLoop implements Runnable {
 
     private boolean checkLeaderPendingTransaction() {
         // check if leader has pending transaction to propose
-        return this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty();
+        return this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty()
+                && last_finished_index != this.server_state.currentIndex.get();
     }
 
     synchronized public void doWork() {
@@ -62,7 +65,9 @@ public class MainLoop implements Runnable {
         if (nextRequestReady) {
             System.out.println("doWork: going to processPendingRequests");
             processPendingRequest();
-        } else if (leaderPendingTransaction) {
+        }
+
+        if (leaderPendingTransaction) {
             System.out.println("doWork: going to proposePendingTransaction");
             proposePendingTransaction();
         }
@@ -124,8 +129,7 @@ public class MainLoop implements Runnable {
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
-            // TODO if we dont increment here and the proposedReqID is not ours and we dont
-            // have the necessary information to process this reqid, will this cause spam?
+            last_finished_index = this.server_state.currentIndex.get();
         }
         System.out.println("------------- proposePendingTransaction end -----------------");
     }
@@ -240,7 +244,6 @@ public class MainLoop implements Runnable {
             System.out.println("Phase2 failed to get majority");
             return -1;
         }
-
 
         // The leader is also an acceptor. Sending learns to learners
         DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
