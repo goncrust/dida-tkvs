@@ -228,7 +228,19 @@ public class MainLoop implements Runnable {
         System.out.println(
                 "Sent phase2 request: " + phase2_request + ". agreedReqID: " + agreedReqID);
 
-        // TODO don't we need to check if phase2 was accepted?
+        phase2_collector.waitForTarget(this.server_state.responses_needed);
+
+        acceptedRequests = 1;
+        for (DadkvsPaxos.PhaseTwoReply reply : phase2_replies) {
+            if (reply.getPhase2Accepted())
+                acceptedRequests++;
+        }
+        if (acceptedRequests < this.server_state.responses_needed) {
+            // Phase 2 failed, we couldn't get a majority
+            System.out.println("Phase2 failed to get majority");
+            return -1;
+        }
+
 
         // The leader is also an acceptor. Sending learns to learners
         DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
