@@ -11,10 +11,12 @@ import io.grpc.stub.StreamObserver;
 public class MainLoop implements Runnable {
     DadkvsServerState server_state;
     int last_finished_index;
+    boolean last_paxos_failed;
 
     public MainLoop(DadkvsServerState state) {
         this.server_state = state;
         this.last_finished_index = -1;
+        this.last_paxos_failed = false;
     }
 
     public void run() {
@@ -96,8 +98,8 @@ public class MainLoop implements Runnable {
         boolean result = this.server_state.store.commit(pendingTransaction.getTransaction());
 
         // increment current index
-        // TODO i think we should increment the current index here
         this.server_state.currentIndex.getAndIncrement();
+        this.last_paxos_failed = false;
 
         // for debug purposes
         System.out.println("Result ( " + result + " ) is ready for request with reqid "
@@ -123,13 +125,11 @@ public class MainLoop implements Runnable {
         int proposingReqID = (Integer) this.server_state.pendingTransactions.keySet().toArray()[0];
         int proposedReqID = paxos(proposingReqID);
         if (proposedReqID == -1) {
-            PaxosInstance inst = this.server_state.getPaxos(this.server_state.currentIndex.get());
-            inst.setRnd(inst.getRnd() + this.server_state.n_servers); // TODO maybe this increment is too soon, will
-                                                                      // cause other leader to not be accepted
+            this.last_paxos_failed = true;
         } else {
             this.server_state.pendingRequests
                     .add(new PendingRequest(proposedReqID, this.server_state.currentIndex.get()));
-            last_finished_index = this.server_state.currentIndex.get();
+            this.last_finished_index = this.server_state.currentIndex.get();
         }
         System.out.println("------------- proposePendingTransaction end -----------------");
     }
@@ -151,6 +151,8 @@ public class MainLoop implements Runnable {
             int offset = rnd % this.server_state.n_servers;
             int newRnd = rnd + (offset - this.server_state.n_servers);
             inst.setRnd(newRnd < 0 ? newRnd + this.server_state.n_servers : newRnd);
+        } else if (last_paxos_failed) {
+            inst.setRnd(inst.getRnd() + this.server_state.n_servers);
         }
 
         // for debug purposes
@@ -205,6 +207,7 @@ public class MainLoop implements Runnable {
         System.out.println("Startin Paxos Phase 2");
 
         // The leader is also an acceptor. Voting for the value we proposed
+        inst.setVrnd(inst.getRnd());
         inst.setVval(agreedReqID);
 
         DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
