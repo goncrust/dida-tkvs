@@ -137,13 +137,17 @@ public class MainLoop implements Runnable {
     private int paxos(int reqid) {
         // for debug purposes
         System.out.println("------------- paxos -----------------");
-        System.out.println("Starting Paxos for reqid " + reqid);
 
         int config = this.server_state.store.read(0).getValue();
         int index = this.server_state.currentIndex.get();
 
         PaxosInstance inst = server_state.getPaxos(index);
         int rnd = inst.getRnd();
+
+        if (inst.getVval() != -1 && inst.getVval() != reqid)
+            reqid = inst.getVval();
+
+        System.out.println("Starting Paxos for reqid " + reqid);
 
         if (rnd == -1) {
             inst.setRnd(this.server_state.my_id);
