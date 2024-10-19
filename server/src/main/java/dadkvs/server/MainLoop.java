@@ -67,9 +67,7 @@ public class MainLoop implements Runnable {
         if (nextRequestReady) {
             System.out.println("doWork: going to processPendingRequests");
             processPendingRequest();
-        }
-
-        if (leaderPendingTransaction) {
+        } else if (leaderPendingTransaction) {
             System.out.println("doWork: going to proposePendingTransaction");
             proposePendingTransaction();
         }
