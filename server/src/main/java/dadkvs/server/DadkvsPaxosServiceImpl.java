@@ -6,6 +6,7 @@ import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
+import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
@@ -93,30 +94,34 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             System.out.println("Responded to phase two request with: config: " + config + " index: "
                     + index + "accepted: " + true);
 
-            DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
-            learn_request.setLearnconfig(config).setLearnindex(index)
-                    .setLearnvalue(inst.getVval())
-                    .setLearntimestamp(inst.getVrnd());
+            // https://stackoverflow.com/questions/57110811/grpc-random-cancelled-exception-on-rpc-calls
+            Context ctx = Context.current().fork();
+            ctx.run(() -> {
+                DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
+                learn_request.setLearnconfig(config).setLearnindex(index)
+                        .setLearnvalue(inst.getVval())
+                        .setLearntimestamp(inst.getVrnd());
 
-            ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
+                ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
 
-            GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
-                    learn_responses,
-                    this.server_state.n_servers);
+                GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
+                        learn_responses,
+                        this.server_state.n_servers);
 
-            for (int j = 0; j < this.server_state.n_servers; j++) {
-                if (j == this.server_state.my_id)
-                    continue;
+                for (int j = 0; j < this.server_state.n_servers; j++) {
+                    if (j == this.server_state.my_id)
+                        continue;
 
-                CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
-                        learn_collector);
-                this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
-                System.out.println(
-                        "Learn request sent to server " + j + " with: config " + config + " index "
-                                + index + "learnvalue " + inst.getVval()
-                                + " learntimestamp " + inst.getVrnd());
-            }
-            learn_collector.waitForTarget(0);
+                    CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
+                            learn_collector);
+                    this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
+                    System.out.println(
+                            "Learn request sent to server " + j + " with: config " + config + " index "
+                                    + index + "learnvalue " + inst.getVval()
+                                    + " learntimestamp " + inst.getVrnd());
+                }
+                learn_collector.waitForTarget(0);
+            });
         } else {
             response = DadkvsPaxos.PhaseTwoReply.newBuilder().setPhase2Config(config)
                     .setPhase2Index(index).setPhase2Accepted(false).build();
