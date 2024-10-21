@@ -43,18 +43,14 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
             inst.setRnd(timestamp);
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
-                    .setPhase1Index(index)
-                    .setPhase1Timestamp(inst.getVrnd())
-                    .setPhase1Accepted(true).setPhase1Value(inst.getVval())
-                    .build();
+                    .setPhase1Index(index).setPhase1Timestamp(inst.getVrnd())
+                    .setPhase1Accepted(true).setPhase1Value(inst.getVval()).build();
 
             System.out.println("Responded to phase one request with: index: " + index
-                    + " timestamp: " + inst.getVrnd()
-                    + "accepted: True value:" + inst.getVval());
+                    + " timestamp: " + inst.getVrnd() + "accepted: True value:" + inst.getVval());
         } else {
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
-                    .setPhase1Index(index)
-                    .setPhase1Timestamp(inst.getRnd())
+                    .setPhase1Index(index).setPhase1Timestamp(inst.getRnd())
                     .setPhase1Accepted(false).build();
             System.out.println("Responded to phase one request with: index: " + index
                     + " timestamp: " + inst.getRnd() + "accepted: False");
@@ -97,28 +93,28 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             // https://stackoverflow.com/questions/57110811/grpc-random-cancelled-exception-on-rpc-calls
             Context ctx = Context.current().fork();
             ctx.run(() -> {
-                DadkvsPaxos.LearnRequest.Builder learn_request = DadkvsPaxos.LearnRequest.newBuilder();
+                DadkvsPaxos.LearnRequest.Builder learn_request =
+                        DadkvsPaxos.LearnRequest.newBuilder();
                 learn_request.setLearnconfig(config).setLearnindex(index)
-                        .setLearnvalue(inst.getVval())
-                        .setLearntimestamp(inst.getVrnd());
+                        .setLearnvalue(inst.getVval()).setLearntimestamp(inst.getVrnd());
 
-                ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
+                ArrayList<DadkvsPaxos.LearnReply> learn_responses =
+                        new ArrayList<DadkvsPaxos.LearnReply>();
 
-                GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
-                        learn_responses,
-                        this.server_state.n_servers);
+                GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector =
+                        new GenericResponseCollector<DadkvsPaxos.LearnReply>(learn_responses,
+                                this.server_state.n_servers);
 
                 for (int j = 0; j < this.server_state.n_servers; j++) {
                     if (j == this.server_state.my_id)
                         continue;
 
-                    CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
-                            learn_collector);
+                    CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer =
+                            new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
                     this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
-                    System.out.println(
-                            "Learn request sent to server " + j + " with: config " + config + " index "
-                                    + index + "learnvalue " + inst.getVval()
-                                    + " learntimestamp " + inst.getVrnd());
+                    System.out.println("Learn request sent to server " + j + " with: config "
+                            + config + " index " + index + "learnvalue " + inst.getVval()
+                            + " learntimestamp " + inst.getVrnd());
                 }
                 learn_collector.waitForTarget(0);
             });
@@ -158,8 +154,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
             this.server_state.main_loop.wakeup();
         }
 
-        response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(true)
-                .setLearnindex(index).setLearnconfig(config).build();
+        response = DadkvsPaxos.LearnReply.newBuilder().setLearnaccepted(true).setLearnindex(index)
+                .setLearnconfig(config).build();
         System.out.println("Responded to learn request with: accepted: true index: " + index
                 + " config: " + config);
 
