@@ -36,11 +36,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
                 + this.server_state.currentIndex.get() + " timestamp received: " + timestamp
                 + " current timestamp (rnd): " + inst.getRnd());
         if (timestamp >= inst.getRnd()) {
-            // Setting up the config to be used for this Paxos instance
-            VersionedValue old_config = server_state.store.read(0);
-            VersionedValue new_config = new VersionedValue(config, old_config.getVersion() + 1);
-            server_state.store.write(0, new_config);
-
             inst.setRnd(timestamp);
             response = DadkvsPaxos.PhaseOneReply.newBuilder().setPhase1Config(config)
                     .setPhase1Index(index).setPhase1Timestamp(inst.getVrnd())
