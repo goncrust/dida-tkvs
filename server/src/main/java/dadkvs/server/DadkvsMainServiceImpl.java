@@ -3,6 +3,7 @@ package dadkvs.server;
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
 import io.grpc.stub.StreamObserver;
+import java.util.Random;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
@@ -18,6 +19,22 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // for debug purposes
         System.out.println("------------- read -----------------");
         System.out.println("Receiving read request:" + request);
+
+        if (this.server_state.is_freezed) {
+            System.out.println("Server is freezed");
+            return;
+        }
+
+        if (this.server_state.slow_mode) {
+            // add a random delay
+            int delay = new Random().nextInt(5000);
+            System.out.println("Slow mode: delaying read request for " + delay + " ms");
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException");
+            }
+        }
 
         int reqid = request.getReqid();
         int key = request.getKey();
@@ -39,6 +56,22 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         // for debug purposes
         System.out.println("------------- committx -----------------");
         System.out.println("Receiving commit request:" + request);
+
+        if (this.server_state.is_freezed) {
+            System.out.println("Server is freezed");
+            return;
+        }
+
+        if (this.server_state.slow_mode) {
+            // add a random delay
+            int delay = new Random().nextInt(1000);
+            System.out.println("Slow mode: delaying read request for " + delay + " ms");
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException");
+            }
+        }
 
         int reqid = request.getReqid();
         int key1 = request.getKey1();
