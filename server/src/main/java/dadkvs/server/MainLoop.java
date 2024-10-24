@@ -61,8 +61,11 @@ public class MainLoop implements Runnable {
 
         boolean nextRequestReady = checkNextRequestReady();
         boolean leaderPendingTransaction = checkLeaderPendingTransaction();
+        boolean nextBatchReady =
+                (this.server_state.currentPaxosInstance.get() - this.lastBatch == 5)
+                        && this.server_state.i_am_leader;
 
-        while (!nextRequestReady && !leaderPendingTransaction) {
+        while (!nextRequestReady && !leaderPendingTransaction && !nextBatchReady) {
             System.out.println("Main loop do work: waiting");
             try {
                 wait();
@@ -74,7 +77,9 @@ public class MainLoop implements Runnable {
             }
         }
 
-        if (this.server_state.currentPaxosInstance.get() - this.lastBatch == 5) {
+        if ((this.server_state.currentPaxosInstance.get() - this.lastBatch == 5)
+                && this.server_state.i_am_leader) {
+            System.out.println("doWork: going to prepareNextBatch");
             this.lastBatch = this.server_state.currentPaxosInstance.get();
             prepareNextBatch();
         }
@@ -151,7 +156,7 @@ public class MainLoop implements Runnable {
         int index = this.server_state.currentPaxosInstance.getAndIncrement();
 
         // A value for this index has already been decided, skipping
-        while (server_state.getPaxos(index).getVrnd() != -1) {
+        while (server_state.getPaxos(index).getVval() != -1) {
             index = this.server_state.currentPaxosInstance.getAndIncrement();
         }
 
@@ -161,6 +166,7 @@ public class MainLoop implements Runnable {
     }
 
     synchronized private void prepareNextBatch() {
+        System.out.println("Preparing batch " + this.lastBatch / 5 + " of Paxos instances");
         IntStream.range(0, 4).forEachOrdered(i -> {
             int result;
             while ((result = paxosPhaseOne(this.lastBatch + i)) == -2);
@@ -246,7 +252,7 @@ public class MainLoop implements Runnable {
         PaxosInstance inst = server_state.getPaxos(index);
 
         // The leader is also an acceptor. Voting for the value we will propose
-        if (inst.getVrnd() == -1) {
+        if (inst.getVval() == -1) {
             inst.setVrnd(inst.getRnd());
             inst.setVval(reqid);
         }
