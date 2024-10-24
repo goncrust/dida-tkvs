@@ -2,9 +2,7 @@ package dadkvs.server;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import dadkvs.DadkvsPaxosServiceGrpc;
@@ -29,8 +27,10 @@ public class DadkvsServerState {
     LinkedHashMap<Integer, PendingTransaction> pendingTransactions;
     PriorityQueue<PendingRequest> pendingRequests;
 
+    AtomicInteger currentIndex; // Index of the next command to be processed
+
     // Paxos variables
-    AtomicInteger currentIndex;
+    AtomicInteger currentPaxosInstance; // Index of the next paxos instance to start
     private LinkedHashMap<Integer, PaxosInstance> instances;
 
     // Possible server configurations
@@ -56,6 +56,7 @@ public class DadkvsServerState {
         pendingRequests = new PriorityQueue<>(Comparator.comparingInt(req -> req.getIndex()));
 
         currentIndex = new AtomicInteger(0);
+        currentPaxosInstance = new AtomicInteger(0);
         instances = new LinkedHashMap<>();
 
         targets = new String[n_servers];
@@ -93,8 +94,10 @@ public class DadkvsServerState {
     }
 
     public PaxosInstance getPaxos(int index) {
-        if (this.instances.get(index) == null)
-            this.instances.put(index, new PaxosInstance());
+        int config = store.read(0).getValue();
+        if (this.instances.get(index) == null) {
+            this.instances.put(index, new PaxosInstance(config));
+        }
         return this.instances.get(index);
     }
 
