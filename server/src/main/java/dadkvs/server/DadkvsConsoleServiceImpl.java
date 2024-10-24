@@ -41,12 +41,24 @@ public class DadkvsConsoleServiceImpl
         System.out.println(request);
 
         boolean response_value = true;
+        int mode = request.getMode();
 
-        this.server_state.debug_mode = request.getMode();
+        if (mode == 1) {
+            System.exit(1);
+        } else if (mode == 2) {
+            this.server_state.is_freezed = true;
+        } else if (mode == 3) {
+            this.server_state.is_freezed = false;
+        } else if (mode == 4) {
+            this.server_state.slow_mode = true;
+        } else if (mode == 5) {
+            this.server_state.slow_mode = false;
+        }
+
         this.server_state.main_loop.wakeup();
 
         // for debug purposes
-        System.out.println("Setting debug mode to = " + this.server_state.debug_mode);
+        System.out.println("Setting debug mode to = " + mode);
 
         DadkvsConsole.SetDebugReply response =
                 DadkvsConsole.SetDebugReply.newBuilder().setAck(response_value).build();

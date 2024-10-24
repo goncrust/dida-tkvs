@@ -19,3 +19,9 @@ util/target/
 contract/.classpath
 contract/target/
 .DS_Store
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+.auctex-auto/

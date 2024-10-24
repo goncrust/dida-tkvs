@@ -14,7 +14,9 @@ import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
     boolean i_am_leader;
-    int debug_mode;
+    boolean is_freezed;
+    boolean slow_mode;
+
     int base_port;
     int my_id;
     int store_size;
@@ -47,7 +49,8 @@ public class DadkvsServerState {
         base_port = port;
         my_id = myself;
         i_am_leader = false;
-        debug_mode = 0;
+        is_freezed = false;
+        slow_mode = false;
         store_size = kv_size;
         n_servers = 5;
         responses_needed = 2;
