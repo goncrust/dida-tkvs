@@ -6,8 +6,10 @@ public class PaxosInstance {
     AtomicInteger rnd;
     AtomicInteger vrnd;
     AtomicInteger vval;
+    AtomicInteger config;
 
-    public PaxosInstance() {
+    public PaxosInstance(int conf) {
+        this.config = new AtomicInteger(conf);
         this.rnd = new AtomicInteger(-1);
         this.vrnd = new AtomicInteger(0);
         this.vval = new AtomicInteger(-1);
@@ -35,5 +37,9 @@ public class PaxosInstance {
 
     public void setVval(int vval) {
         this.vval.set(vval);
+    }
+
+    public int getConfig() {
+        return config.get();
     }
 }
