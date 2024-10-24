@@ -45,6 +45,17 @@ public class MainLoop implements Runnable {
         return this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty();
     }
 
+    private void checkReconfiguration() {
+        if (this.server_state.nextConfigIndexes.isEmpty())
+            return;
+
+        int nextIndex = this.server_state.nextConfigIndexes.get(0);
+        if (nextIndex == this.server_state.currentIndex.get()) {
+            this.server_state.reconfigurePaxos();
+            this.server_state.nextConfigIndexes.remove(0);
+        }
+    }
+
     synchronized public void doWork() {
         System.out.println("Main loop do work start");
 
@@ -76,6 +87,8 @@ public class MainLoop implements Runnable {
             proposePendingTransaction();
         }
 
+        checkReconfiguration();
+
         System.out.println("Main loop do work finish");
     }
 
@@ -97,8 +110,18 @@ public class MainLoop implements Runnable {
                 this.server_state.pendingTransactions.get(pendingRequest.getReqid());
         pendingTransaction.getTransaction().setTimestamp(pendingRequest.getIndex());
 
-        // commit
-        boolean result = this.server_state.store.commit(pendingTransaction.getTransaction());
+        TransactionRecord transaction = pendingTransaction.getTransaction();
+
+        boolean result = true;
+
+        // checking for reconfiguration
+        if (transaction.getPrepareKey() == 0) {
+            this.server_state.nextConfigIndexes
+                    .add(this.server_state.currentIndex.get() + this.server_state.padding);
+        } else {
+            // commit
+            result = this.server_state.store.commit(transaction);
+        }
 
         // for debug purposes
         System.out.println("Result ( " + result + " ) is ready for request with reqid "

@@ -167,7 +167,12 @@ public class DadkvsConsoleClient {
                     if (parameter1 != null) {
                         try {
                             configuration = Integer.parseInt(parameter1);
+
+                            if (configuration > 2)
+                                System.out.println("doesnt exist configs > 2");
+
                             System.out.println("reconfiguring to configuration " + configuration);
+
                             int old_config = 0;
                             int old_config_ts = 0;
 
