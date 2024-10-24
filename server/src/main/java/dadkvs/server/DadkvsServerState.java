@@ -1,5 +1,6 @@
 package dadkvs.server;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -32,7 +33,11 @@ public class DadkvsServerState {
     private LinkedHashMap<Integer, PaxosInstance> instances;
 
     // Possible server configurations
-    Integer[][] configs = {{0, 1, 2}, {1, 2, 3}, {2, 3, 4}};
+    Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+
+    // Reconfiguration variables
+    int padding;
+    ArrayList<Integer> nextConfigIndexes;
 
     String[] targets;
     ManagedChannel[] channels;
@@ -54,6 +59,9 @@ public class DadkvsServerState {
 
         currentIndex = new AtomicInteger(0);
         instances = new LinkedHashMap<>();
+
+        padding = 3;
+        nextConfigIndexes = new ArrayList<>();
 
         targets = new String[n_servers];
         for (int i = 0; i < n_servers; i++) {
@@ -93,6 +101,13 @@ public class DadkvsServerState {
         if (this.instances.get(index) == null)
             this.instances.put(index, new PaxosInstance());
         return this.instances.get(index);
+    }
+
+    public void reconfigurePaxos() {
+        int nextConfig = store.read(0).getValue() + 1;
+        int configTimestamp = this.currentIndex.get() - padding;
+        VersionedValue vv = new VersionedValue(nextConfig, configTimestamp);
+        this.store.write(0, vv);
     }
 
 }
