@@ -35,7 +35,7 @@ public class DadkvsServerState {
     private LinkedHashMap<Integer, PaxosInstance> instances;
 
     // Possible server configurations
-    Integer[][] configs = { { 0, 1, 2 }, { 1, 2, 3 }, { 2, 3, 4 } };
+    Integer[][] configs = {{0, 1, 2}, {1, 2, 3}, {2, 3, 4}};
 
     // Reconfiguration variables
     int padding;
