@@ -1,6 +1,7 @@
 package dadkvs.server;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import dadkvs.DadkvsMain;
@@ -79,6 +80,18 @@ public class MainLoop implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 System.exit(1);
+            }
+        }
+
+        if (this.server_state.slow_mode) {
+            Random rnd = new Random();
+            int sleepTime = 200 + rnd.nextInt(4800);
+
+            System.out.println("Server in slow mode, going to sleep for " + sleepTime + "ms");
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
