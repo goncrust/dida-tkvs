@@ -23,7 +23,8 @@
 dida-tkvs}
 
 \author{Gonçalo Rua, João Gouveia, Francisco Salgueiro\\
-  Instituto Superior Técnico\\ Av. Rovisco Pais 1\\ \{goncalonrua,joaotalonegouveia,francisco.salgueiro\}@tecnico.ulisboa.pt\\
+    Instituto Superior Técnico\\ Av. Rovisco Pais 1\\
+    \{goncalonrua,joaotalonegouveia,francisco.salgueiro\}@tecnico.ulisboa.pt\\
 }
 
 \maketitle
@@ -33,79 +34,109 @@ dida-tkvs}
     dida-tkvs is a replicated key-value store composed of multiple servers,
     transactional clients, and a configuration console. High-performance
     consistency across replicas is achieved using the Multi-Paxos consensus
-    algorithm. In this paper, we focus on the most critical aspects of our implementation.
+    algorithm.
 \end{abstract}
-
 
 %-------------------------------------------------------------------------
 \Section{Introduction}
-    In distributed systems, ensuring consistency and coordination across
-    multiple nodes is a challenging task, especially in environments where
-    failures can occur. Paxos is a consensus algorithm that addresses
-    these issues by allowing a set of nodes to agree on a single value, even
-    in the presence of failures. In this project, we implemented a transactional
-    key-value store replicated using Paxos to ensure that all servers maintain a
-    consistent view of the data.
+    In this project, we implemented a transactional key-value store replicated
+    using Paxos, to ensure that all servers maintain a consistent view of the
+    data.
 
-    The system we developed operates in phases, starting from basic client-server
-    communication and evolving into a fully reconfigurable Paxos-based system.
-    This paper highlights the key components of the system, focusing on the main loop
-    that drives the consensus process and handles new client requests. The logic behind
-    selecting the next round number for the leader is also discussed, showcasing how
-    our system ensures liveness and consistency.
-
+    This paper highlights the key components of the system, focusing on
+    transaction execution, the Multi-Paxos implementation, and how
+    reconfiguration is supported
 
 %-------------------------------------------------------------------------
-\Section{System Overview}
-    The key-value store consists of multiple servers, each holding a replicated state
-    of the store. Clients initiate transactions, which involve reading and updating
-    key-value pairs. Servers coordinate through Paxos to assign unique timestamps to
-    updates, ensuring that conflicting operations are managed correctly.
-    The system can dynamically reconfigure itself, allowing different sets of servers
-    to take on the roles of proposers and acceptors while ensuring that all nodes act
-    as learners.
+\Section{Design}
+    We developed all steps outlined in the guidelines. As such, our key-value
+    store uses Multi-Paxos to decide the ID of the next transaction to be
+    processed, while also correctly supporting reconfiguration.
 
 %-------------------------------------------------------------------------
-\SubSection{Main Loop for Transaction Proposals and Execution}
-    The main loop is central to the system’s operation, where the leader proposes
-    transactions, and the learners execute them. The flow is as follows:
+\SubSection{Executing Transactions}
+    Every server maintains a list of transactions that have not yet been
+    executed locally and a priority queue of unprocessed request IDs, sorted by
+    their timestamps. Additionally, each server keeps track of the next
+    timestamp it expects to execute, which may be interpreted as the server's
+    current position in history.
 
-\begin{itemize}
-    \item Transaction Proposal by Leader: To be completed.
-    \item Transaction Execution by Learners: To be completed.
-\end{itemize}
+    In order to execute a transaction, two conditions must be met:
+    \begin{enumerate}
+        \item The next timestamp the server expects to execute must match the
+        timestamp of the ID at the top of the priority queue.
+        \item The transaction with that ID must be present in the server's list
+        of transactions.
+    \end{enumerate}
+    Whenever these two conditions hold true, the server executes the
+    corresponding transaction, replies to the client with the result, removes
+    the transaction from the list, and pops the ID from the queue.
+
+    The \verb|MainLoop| class is where the aforementioned logic is handled. The
+    \verb|ServerState| class is where the list, priority queue, and the current
+    position in history are stored.
 
 %-------------------------------------------------------------------------
-\SubSection{Handling New Requests}
-    When a new request is received from a client, the system must ensure that the
-    transaction is processed in a consistent and timely manner. This involves
-    coordinating between the leader and the learners to ensure the request is either
-    committed or aborted based on the current state of the key-value store. To be completed.
+\SubSection{Multi-Paxos}
+    Consistency across replicas is ensured by using Multi-Paxos to decide the
+    ID of the next transaction to be processed, effectively attributing a
+    timestamp to each request.
+
+    Whenever the leader replica finishes using the previous batch to decide
+    request IDs, it prepares a new batch of five Paxos instances. If, during
+    this preparation phase, the leader encounters an instance in which some
+    replicas have already voted for a value, it realizes that it is behind.
+    Consequently, it immediately executes phase two of Paxos for that same
+    instance in order to update itself.
+
+    Whenever a server receives a learn request, it compares the request's index
+    to the next timestamp it expects to execute. If the request's index is less
+    than the next expected timestamp, the server discards the learn request, as
+    it refers to an ID that has already been processed locally. Otherwise, the
+    server stores the ID in its priority queue. This approach may lead to
+    storing duplicate request IDs. Duplicate ID removal is handled locally by
+    each server.
+
+    Our implementation of Multi-Paxos differs from Lamport's
+    description~\cite{lamport2001paxos} only in how it handles the occurrence of
+    gaps in the command sequence.
+
+    In our implementation, the leader keeps track of the number of the next
+    Paxos instance it will use to propose an ID. If that Paxos instance has
+    already been used to decide an ID, the leader skips ahead until it finds an
+    instance number that has not yet been used.
+
+    Our strategy is obviously less efficient than Lamport's approach of using
+    ``no-op'' commands to skip holes in the command sequence. Our naive approach
+    is, however, much simpler to implement. This was the driving force behind
+    our decision.
+
+    The mapping between what we just described and the corresponding code is
+    analogous to how we handled executing transactions. The functionality
+    described above is implemented the \verb|MainLoop| class, while the
+    auxiliary data is stored in the \verb|ServerState| class.
 
 %-------------------------------------------------------------------------
-\SubSection{Computing the Next Round Number (rnd) for the Leader}
-    The leader plays a crucial role in managing the order of transactions.
-    One of its key responsibilities is determining the next round number (rnd)
-    to use in Paxos. This ensures that no conflicting proposals are made,
-    and that progress is always possible. To be completed.
+\SubSection{Reconfiguration}
+    To support reconfiguration, we implemented the strategy Lamport refers to as
+    ``Reconfiguration Made Simple''~\cite{lamportReconfiguringStateMachine2010}.
+    We chose this approach because, as the names suggest, it is easier to
+    implement than its counterpart, ``Reconfiguration Made Harder''.
 
 %-------------------------------------------------------------------------
 \Section{Conclusion}
-    The implementation of our transactional key-value store using Paxos
-    demonstrates the effectiveness of the algorithm in maintaining consistency
-    across distributed servers. The main loop and its handling of transaction
-    proposals and executions are vital to the system's overall functionality.
-    While we have discussed key aspects of the system, including how the leader
-    computes the next round number, further optimization could be explored,
-    especially in handling client requests efficiently. Overall, our implementation
-    provides a robust foundation for distributed consensus in transactional systems.
+    We implemented a robust and high-performance transactional key-value store,
+    that uses Multi-Paxos to ensure consistency across replicas and supports
+    reconfiguration.
 
-\begin{figure}[h]
-   \caption{Example of caption.}
-\end{figure}
+    The algorithms we used deviate very little from those described by Lamport
+    in his original work.
+
+    In terms of code, the \verb|MainLoop| class handles most of the logic
+    regarding transaction execution and Multi-Paxos management. The
+    \verb|ServerState| class stores all the necessary data.
 
 %-------------------------------------------------------------------------
-\nocite{ex1,ex2}
 \bibliographystyle{latex8}
 \bibliography{latex8}
 
