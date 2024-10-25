@@ -15,7 +15,7 @@ public class MainLoop implements Runnable {
 
     public MainLoop(DadkvsServerState state) {
         this.server_state = state;
-        this.lastBatch = -5;
+        this.lastBatch = -this.server_state.padding;
     }
 
     public void run() {
@@ -45,6 +45,12 @@ public class MainLoop implements Runnable {
         return this.server_state.i_am_leader && !this.server_state.pendingTransactions.isEmpty();
     }
 
+    private boolean checkNextBatchReady() {
+        return (this.server_state.currentPaxosInstance.get()
+                - this.lastBatch == this.server_state.padding)
+                && this.server_state.i_am_leader;
+    }
+
     private void checkReconfiguration() {
         if (this.server_state.nextConfigIndexes.isEmpty())
             return;
@@ -61,9 +67,7 @@ public class MainLoop implements Runnable {
 
         boolean nextRequestReady = checkNextRequestReady();
         boolean leaderPendingTransaction = checkLeaderPendingTransaction();
-        boolean nextBatchReady =
-                (this.server_state.currentPaxosInstance.get() - this.lastBatch == 5)
-                        && this.server_state.i_am_leader;
+        boolean nextBatchReady = checkNextBatchReady();
 
         while (!nextRequestReady && !leaderPendingTransaction && !nextBatchReady) {
             System.out.println("Main loop do work: waiting");
@@ -71,14 +75,14 @@ public class MainLoop implements Runnable {
                 wait();
                 nextRequestReady = checkNextRequestReady();
                 leaderPendingTransaction = checkLeaderPendingTransaction();
+                nextBatchReady = checkNextBatchReady();
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 System.exit(1);
             }
         }
 
-        if ((this.server_state.currentPaxosInstance.get() - this.lastBatch == 5)
-                && this.server_state.i_am_leader) {
+        if (nextBatchReady) {
             System.out.println("doWork: going to prepareNextBatch");
             this.lastBatch = this.server_state.currentPaxosInstance.get();
             prepareNextBatch();
@@ -111,8 +115,7 @@ public class MainLoop implements Runnable {
         if (!this.server_state.pendingTransactions.containsKey(pendingRequest.getReqid()))
             return;
 
-        PendingTransaction pendingTransaction =
-                this.server_state.pendingTransactions.get(pendingRequest.getReqid());
+        PendingTransaction pendingTransaction = this.server_state.pendingTransactions.get(pendingRequest.getReqid());
         pendingTransaction.getTransaction().setTimestamp(pendingRequest.getIndex());
 
         TransactionRecord transaction = pendingTransaction.getTransaction();
@@ -135,8 +138,7 @@ public class MainLoop implements Runnable {
         DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
                 .setReqid(pendingRequest.getReqid()).setAck(result).build();
 
-        StreamObserver<DadkvsMain.CommitReply> responseObserver =
-                pendingTransaction.getResponseObserver();
+        StreamObserver<DadkvsMain.CommitReply> responseObserver = pendingTransaction.getResponseObserver();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -160,20 +162,23 @@ public class MainLoop implements Runnable {
             index = this.server_state.currentPaxosInstance.getAndIncrement();
         }
 
-        while (!paxosPhaseTwo(reqid, index));
+        while (!paxosPhaseTwo(reqid, index))
+            ;
         this.server_state.pendingRequests.add(new PendingRequest(reqid, index));
         System.out.println("------------- proposePendingTransaction end -----------------");
     }
 
     synchronized private void prepareNextBatch() {
-        System.out.println("Preparing batch " + this.lastBatch / 5 + " of Paxos instances");
-        IntStream.range(0, 4).forEachOrdered(i -> {
+        System.out.println("Preparing batch " + this.lastBatch / this.server_state.padding + " of Paxos instances");
+        IntStream.range(0, this.server_state.padding - 1).forEachOrdered(i -> {
             int result;
-            while ((result = paxosPhaseOne(this.lastBatch + i)) == -2);
+            while ((result = paxosPhaseOne(this.lastBatch + i)) == -2)
+                ;
             // Someone already proposed a value for this instance, we are behind in time
             if (result != -1) {
                 // Updating our paxos state for this index
-                while (!paxosPhaseTwo(result, this.lastBatch + i));
+                while (!paxosPhaseTwo(result, this.lastBatch + i))
+                    ;
             }
         });
     }
@@ -195,26 +200,24 @@ public class MainLoop implements Runnable {
             inst.setRnd(inst.getRnd() + this.server_state.n_servers);
         }
 
-        DadkvsPaxos.PhaseOneRequest.Builder phase1_request =
-                DadkvsPaxos.PhaseOneRequest.newBuilder();
+        DadkvsPaxos.PhaseOneRequest.Builder phase1_request = DadkvsPaxos.PhaseOneRequest.newBuilder();
 
         phase1_request.setPhase1Config(inst.getConfig());
         phase1_request.setPhase1Index(index);
         phase1_request.setPhase1Timestamp(inst.getRnd());
 
-        ArrayList<DadkvsPaxos.PhaseOneReply> phase1_replies =
-                new ArrayList<DadkvsPaxos.PhaseOneReply>();
+        ArrayList<DadkvsPaxos.PhaseOneReply> phase1_replies = new ArrayList<DadkvsPaxos.PhaseOneReply>();
 
-        GenericResponseCollector<DadkvsPaxos.PhaseOneReply> phase1_collector =
-                new GenericResponseCollector<DadkvsPaxos.PhaseOneReply>(phase1_replies,
-                        this.server_state.n_servers);
+        GenericResponseCollector<DadkvsPaxos.PhaseOneReply> phase1_collector = new GenericResponseCollector<DadkvsPaxos.PhaseOneReply>(
+                phase1_replies,
+                this.server_state.n_servers);
 
         for (int i : this.server_state.configs[inst.getConfig()]) {
             if (i == this.server_state.my_id)
                 continue;
 
-            CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> phase1_observer =
-                    new CollectorStreamObserver<DadkvsPaxos.PhaseOneReply>(phase1_collector);
+            CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> phase1_observer = new CollectorStreamObserver<DadkvsPaxos.PhaseOneReply>(
+                    phase1_collector);
 
             this.server_state.async_stubs[i].phaseone(phase1_request.build(), phase1_observer);
         }
@@ -257,27 +260,25 @@ public class MainLoop implements Runnable {
             inst.setVval(reqid);
         }
 
-        DadkvsPaxos.PhaseTwoRequest.Builder phase2_request =
-                DadkvsPaxos.PhaseTwoRequest.newBuilder();
+        DadkvsPaxos.PhaseTwoRequest.Builder phase2_request = DadkvsPaxos.PhaseTwoRequest.newBuilder();
 
         phase2_request.setPhase2Config(inst.getConfig());
         phase2_request.setPhase2Index(index);
         phase2_request.setPhase2Value(inst.getVval());
         phase2_request.setPhase2Timestamp(inst.getRnd());
 
-        ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_replies =
-                new ArrayList<DadkvsPaxos.PhaseTwoReply>();
+        ArrayList<DadkvsPaxos.PhaseTwoReply> phase2_replies = new ArrayList<DadkvsPaxos.PhaseTwoReply>();
 
-        GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector =
-                new GenericResponseCollector<DadkvsPaxos.PhaseTwoReply>(phase2_replies,
-                        this.server_state.n_servers);
+        GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> phase2_collector = new GenericResponseCollector<DadkvsPaxos.PhaseTwoReply>(
+                phase2_replies,
+                this.server_state.n_servers);
 
         for (int i : this.server_state.configs[inst.getConfig()]) {
             if (i == this.server_state.my_id)
                 continue;
 
-            CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer =
-                    new CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply>(phase2_collector);
+            CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> phase2_observer = new CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply>(
+                    phase2_collector);
 
             this.server_state.async_stubs[i].phasetwo(phase2_request.build(), phase2_observer);
         }
@@ -304,16 +305,16 @@ public class MainLoop implements Runnable {
 
         ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<DadkvsPaxos.LearnReply>();
 
-        GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector =
-                new GenericResponseCollector<DadkvsPaxos.LearnReply>(learn_responses,
-                        this.server_state.n_servers);
+        GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<DadkvsPaxos.LearnReply>(
+                learn_responses,
+                this.server_state.n_servers);
 
         for (int j = 0; j < this.server_state.n_servers; j++) {
             if (j == this.server_state.my_id)
                 continue;
 
-            CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer =
-                    new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
+            CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(
+                    learn_collector);
             this.server_state.async_stubs[j].learn(learn_request.build(), learn_observer);
             System.out.println("Learn request sent to server " + j + " with: config "
                     + inst.getConfig() + " index " + index + "learnvalue " + inst.getVval()
