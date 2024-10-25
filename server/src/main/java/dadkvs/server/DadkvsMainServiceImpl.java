@@ -3,7 +3,6 @@ package dadkvs.server;
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
 import io.grpc.stub.StreamObserver;
-import java.util.Random;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 
@@ -16,25 +15,13 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
     @Override
     public void read(DadkvsMain.ReadRequest request,
             StreamObserver<DadkvsMain.ReadReply> responseObserver) {
+
         // for debug purposes
         System.out.println("------------- read -----------------");
         System.out.println("Receiving read request:" + request);
 
-        if (this.server_state.is_freezed) {
-            System.out.println("Server is freezed");
-            return;
-        }
-
-        if (this.server_state.slow_mode) {
-            // add a random delay
-            int delay = new Random().nextInt(5000);
-            System.out.println("Slow mode: delaying read request for " + delay + " ms");
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                System.out.println("InterruptedException");
-            }
-        }
+        // frozen state
+        this.server_state.waitIfFrozen();
 
         int reqid = request.getReqid();
         int key = request.getKey();
@@ -57,21 +44,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         System.out.println("------------- committx -----------------");
         System.out.println("Receiving commit request:" + request);
 
-        if (this.server_state.is_freezed) {
-            System.out.println("Server is freezed");
-            return;
-        }
-
-        if (this.server_state.slow_mode) {
-            // add a random delay
-            int delay = new Random().nextInt(1000);
-            System.out.println("Slow mode: delaying read request for " + delay + " ms");
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                System.out.println("InterruptedException");
-            }
-        }
+        // frozen state
+        this.server_state.waitIfFrozen();
 
         int reqid = request.getReqid();
         int key1 = request.getKey1();
@@ -85,8 +59,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
         System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2
                 + " v2 " + version2 + " wk " + writekey + " writeval " + writeval);
 
-        TransactionRecord txrecord =
-                new TransactionRecord(key1, version1, key2, version2, writekey, writeval);
+        TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval);
         PendingTransaction transaction = new PendingTransaction(txrecord, responseObserver);
 
         this.server_state.pendingTransactions.put(reqid, transaction);

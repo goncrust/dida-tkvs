@@ -116,4 +116,19 @@ public class DadkvsServerState {
         this.store.write(0, vv);
     }
 
+    synchronized public void unfreeze() {
+        this.is_freezed = false;
+        notifyAll();
+    }
+
+    synchronized public void waitIfFrozen() {
+        while (this.is_freezed) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

@@ -48,7 +48,7 @@ public class DadkvsConsoleServiceImpl
         } else if (mode == 2) {
             this.server_state.is_freezed = true;
         } else if (mode == 3) {
-            this.server_state.is_freezed = false;
+            this.server_state.unfreeze();
         } else if (mode == 4) {
             this.server_state.slow_mode = true;
         } else if (mode == 5) {
