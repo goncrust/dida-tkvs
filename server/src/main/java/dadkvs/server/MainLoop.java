@@ -172,8 +172,11 @@ public class MainLoop implements Runnable {
         int index = this.server_state.currentPaxosInstance.getAndIncrement();
 
         // A value for this index has already been decided, skipping
-        // TODO: What if we skip more than 5 times?
         while (server_state.getPaxos(index).getVval() != -1) {
+            // We might skip ahead to the point we are outside our current batch
+            if (this.checkNextBatchReady()) {
+                this.prepareNextBatch();
+            }
             index = this.server_state.currentPaxosInstance.getAndIncrement();
         }
 
