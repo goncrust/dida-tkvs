@@ -45,7 +45,7 @@ dida-tkvs}
 
     This paper highlights the key components of the system, focusing on
     transaction execution, the Multi-Paxos implementation, and how
-    reconfiguration is supported
+    reconfiguration is supported.
 
 %-------------------------------------------------------------------------
 \Section{Design}
@@ -83,7 +83,7 @@ dida-tkvs}
     timestamp to each request.
 
     Whenever the leader replica finishes using the previous batch to decide
-    request IDs, it prepares a new batch of five Paxos instances. If, during
+    request IDs, it prepares a new batch of three Paxos instances. If, during
     this preparation phase, the leader encounters an instance in which some
     replicas have already voted for a value, it realizes that it is behind.
     Consequently, it immediately executes phase two of Paxos for that same
